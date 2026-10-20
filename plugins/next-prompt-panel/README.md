@@ -36,51 +36,63 @@ The panel only reads replies in the shape below. Add these rules to your agent i
 as `CLAUDE.md` or `AGENTS.md`:
 
 ````markdown
-End each task reply with these two sections.
+End each task reply with a Recap section, then a What Next section.
 
 ## Recap
 
 - <branch> · <commit state, for example "not committed" or "committed abc1234">
 - Did: <one sentence on what this turn did>
-- Open: <unfinished work, if any>
-- Need from you: <actions for the user, if any>
+- Open: <unfinished work, if any; leave the line out when there is none>
+- Need from you: <actions for the user, if any; leave the line out when there is none>
 
 ## What Next
+
+Put the suggested prompts in one fenced block under What Next. Write no text around the block.
+Each prompt must make sense on its own and name a concrete action.
+
+For one suggestion, use a plain fence:
 
 ```text
 prompt: <the next prompt to send>
 why: <optional reason, shown under the prompt and never sent>
+suggestion: true
 ```
-````
 
-- `Open` and `Need from you` are optional. Did, Open, and Need from you can hold a nested list.
-- A Recap in another shape is not folded: it stays in the reply text above the panel.
-- Two older Recap shapes also work: `Branch`, `Did`, `Commit/push` as three labeled bullets, and
-  `Branch`, `Commit/push`, `Did`, `Not yet`, `Need from you` as five.
-- A plain fence can hold several `prompt:` lines. Each can have its own `why:`, `thread: new`
-  (unrelated work), and `suggestion: true` (shows a **Suggested** badge).
+For two or more different suggestions, use a `next-prompts` fence with JSON:
 
-For several prompts that can be sent together, use a `next-prompts` fence with JSON:
-
-````markdown
 ```next-prompts
 {
   "version": 1,
   "prompts": [
-    { "id": "docs", "prompt": "Document the new function.", "why": "Users can find it." },
-    { "id": "test", "prompt": "Add an empty-list test.", "suggestion": true }
+    { "id": "docs", "prompt": "Document the new function in README.md.", "why": "Users can find it.", "suggestion": true },
+    { "id": "test", "prompt": "Add a test for the empty list.", "suggestion": false },
+    { "id": "audit", "prompt": "Audit the build logs for warnings.", "thread": "new", "suggestion": false }
   ],
   "exclusiveGroups": [],
   "allowedCombinations": [["docs", "test"]]
 }
 ```
+
+Rules for the `next-prompts` block:
+
+- Put the recommended prompt first and set `"suggestion": true` on it. Set `false` on the others.
+- Each `id` is unique, lowercase, and matches `[a-z][a-z0-9-]*`.
+- `exclusiveGroups` lists sets of prompts that conflict; the user can pick at most one per set. Use `[]` when nothing conflicts.
+- `allowedCombinations` lists the exact sets the user may send together as one message. Add a set only when every prompt in it can run together. Use `[]` when each prompt must be sent alone.
+- A set in either list holds 2 or more ids. A set never holds two prompts of the same exclusive group.
+- Set `"thread": "new"` on a prompt that is unrelated to the current task. It starts in a new conversation, so its text must carry all needed context. Never put it in either list.
+- Set `"goal": "done"` on the block when the task is finished.
+- Keep commit and push prompts alone: never put them in `allowedCombinations`.
 ````
 
-- `exclusiveGroups` lists prompts where you can pick at most one.
-- `allowedCombinations` lists the exact sets that you can send together as one numbered message.
-  Without it, each prompt is sent alone.
-- A prompt can also set `"thread": "new"` and `"suggestion": true`. The block can set
-  `"goal": "done"`, which shows **Task done**.
+- A Recap in another shape is not folded: it stays in the reply text above the panel.
+- Two older Recap shapes also work: `Branch`, `Did`, `Commit/push` as three labeled bullets, and
+  `Branch`, `Commit/push`, `Did`, `Not yet`, `Need from you` as five.
+- A plain fence can hold several `prompt:` lines, each with its own `why:`, `thread: new`, and
+  `suggestion: true` lines. These prompts are always sent one at a time.
+- In the panel, an exclusive group shows as a **Choose one** list with radio buttons, and allowed
+  combinations show as checkboxes with **Send selected**. A `next-prompts` block that breaks a rule
+  above is ignored, and the reply keeps the normal Paseo rendering.
 
 ## Data
 
