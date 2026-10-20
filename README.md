@@ -154,6 +154,7 @@ status alone does not prove every plugin action works.
 | [vscode-warm-light](plugins/vscode-warm-light/README.md) | Apply the warm, customized VS Code Light+ palette through Paseo's theme API. |
 | [claude-look](plugins/claude-look/README.md) | Claude Light theme, Claude desktop's 768px chat column, and its 1.5 reply line-height. |
 | [next-prompt-actions](plugins/next-prompt-actions/README.md) | Send next-step prompts inside their blocks on desktop, with optional bounded Jev auto-run. |
+| [next-prompt-panel](plugins/next-prompt-panel/README.md) | Turn a reply's Recap and What Next suggestions into a panel with Send, Edit, and New thread, on every client. Paseo 0.12+. |
 | [prompt-translate](plugins/prompt-translate/README.md) | Show English translations under Vietnamese prompts, and enhance drafts into English prompts with Cmd/Ctrl+Enter, on desktop. |
 | [skill-pins](plugins/skill-pins/README.md) | Pin skills such as watchtower in the desktop composer; each turn tells Claude or Codex to load them. |
 | [thread-branch](plugins/thread-branch/README.md) | Show the current branch beside the composer and open its PR through a separate pill. |
