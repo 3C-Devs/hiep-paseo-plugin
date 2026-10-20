@@ -2,7 +2,10 @@
   "id": "next-prompt-panel",
   "name": "Next prompt panel",
   "description": "Turns a reply's Recap and What Next suggestions into a panel with Send, Edit, and New thread buttons.",
-  "media": ["assets/next-prompt-panel.png"],
+  "media": [
+    "assets/next-prompt-panel.png",
+    "assets/next-prompt-panel-demo.mp4"
+  ],
   "requirements": {
     "paseo": ">=0.12.0"
   }
