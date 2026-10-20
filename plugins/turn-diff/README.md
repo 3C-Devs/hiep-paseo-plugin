@@ -6,6 +6,12 @@ on the card to see what that turn changed in it. This is the turn diff part of
 
 Do not install both plugins: each turn would then show two cards.
 
+![Card after a turn: 4 files changed +49 -2, the commit, and one row per file.](assets/turn-diff-card.png)
+
+![Turn diff panel showing what the turn changed in src/todo.js.](assets/turn-diff-panel.png)
+
+The images come from Paseo 0.12.0, with sample data.
+
 ## What the card shows
 
 After each agent turn that changed files or made commits, the thread gets one row:
@@ -52,10 +58,10 @@ bytes, deleted at turn end, dropped after a day), so a plugin reload mid-turn st
 
 ## Install
 
-From GitHub:
+From GitHub. Turn on **Settings → Plugins → Enable plugins** first; it starts off.
 
 ```bash
-paseo plugin add HiepPP/hiep-paseo-plugin:plugins/turn-diff
+paseo plugin add git:HiepPP/hiep-paseo-plugin:plugins/turn-diff
 ```
 
 From a clone:
