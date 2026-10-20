@@ -157,6 +157,7 @@ status alone does not prove every plugin action works.
 | [prompt-translate](plugins/prompt-translate/README.md) | Show English translations under Vietnamese prompts, and enhance drafts into English prompts with Cmd/Ctrl+Enter, on desktop. |
 | [skill-pins](plugins/skill-pins/README.md) | Pin skills such as watchtower in the desktop composer; each turn tells Claude or Codex to load them. |
 | [thread-branch](plugins/thread-branch/README.md) | Show the current branch beside the composer and open its PR through a separate pill. |
+| [turn-diff](plugins/turn-diff/README.md) | Add a card after each agent turn that lists the files and commits it changed; click a file to see its diff. |
 | [jev-orchestrator](plugins/jev-orchestrator/README.md) | Direct Jev model/effort routing to one agent, plus optional scoped delegation with discovery, escalation, review, and ownership locks. |
 | [Board](plugins/board/README.md) | Group conversations by project with pastel colors, avatars, parent/subagent clusters, stars, and UI scaling. |
 | [jev-evaluator](plugins/jev-evaluator/README.md) | Expose Jev evaluations as an MCP tool for Codex and Claude agents. |

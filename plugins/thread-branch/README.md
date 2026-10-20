@@ -26,6 +26,9 @@ A detached HEAD shows `@<short sha>`. Non-git directories show no pill.
 
 ## Turn diff
 
+To get only this card, without the pills and the PR picker, install
+[turn-diff](../turn-diff/README.md) instead. Do not install both.
+
 After each agent turn that changed files or made commits, the thread gets one row:
 `2 files changed +14 -3`, then the commits made during the turn (at most 10), then up to 20
 files with their `+added -deleted` lines and `and N more`. Binary files show `binary`. A turn
