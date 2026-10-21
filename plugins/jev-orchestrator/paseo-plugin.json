@@ -1,6 +1,0 @@
-{
-  "id": "jev-orchestrator",
-  "requirements": {
-    "paseo": ">=0.8.0"
-  }
-}

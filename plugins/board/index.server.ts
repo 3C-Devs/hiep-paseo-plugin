@@ -1,4 +1,4 @@
-import type { PluginServerContext } from "@getpaseo/plugin/server";
+import type { PluginHandlerContext, PluginServerContext } from "@getpaseo/plugin/server";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
@@ -13,7 +13,8 @@ import { boardHostRpc, boardRpc, removeRunRpc, starRunRpc } from "./shared/board
 import { createRecapStore, parseRecap, recapEntry } from "./server/recaps";
 import { recapsRpc } from "./shared/recaps";
 import { firstPromptTitle, isCommandTitle } from "./server/title";
-import type { PaseoApi, PaseoProviderModelsResult } from "@getpaseo/client";
+
+type PaseoApi = PluginHandlerContext["paseo"];
 
 export default function contribute(server: PluginServerContext) {
   server.registerSettings(projectColors);
@@ -134,7 +135,10 @@ export default function contribute(server: PluginServerContext) {
   );
   let pending: Promise<void> | undefined;
   // Provider model catalogs rarely change; a failed read is retried on the next poll.
-  const catalogs = new Map<string, Promise<PaseoProviderModelsResult["models"]>>();
+  const catalogs = new Map<
+    string,
+    Promise<Awaited<ReturnType<PaseoApi["providers"]["listModels"]>>["models"]>
+  >();
   const catalog = (paseo: PaseoApi, provider: string) => {
     let models = catalogs.get(provider);
     if (!models) {

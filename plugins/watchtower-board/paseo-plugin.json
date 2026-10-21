@@ -1,6 +1,0 @@
-{
-  "id": "watchtower-board",
-  "requirements": {
-    "paseo": ">=0.8.0"
-  }
-}

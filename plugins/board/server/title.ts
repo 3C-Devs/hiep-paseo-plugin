@@ -1,4 +1,6 @@
-import type { PaseoApi } from "@getpaseo/client";
+import type { PluginHandlerContext } from "@getpaseo/plugin/server";
+
+type PaseoApi = PluginHandlerContext["paseo"];
 
 // Prompt Translate prepends `$caveman <mode>` to a new thread's first prompt, and Paseo titles
 // a thread with the first prompt line, so the title names the mode instead of the goal.

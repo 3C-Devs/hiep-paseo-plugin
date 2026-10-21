@@ -1,6 +1,0 @@
-{
-  "id": "jev-permission-gate",
-  "requirements": {
-    "paseo": ">=0.8.0"
-  }
-}

@@ -1,6 +1,0 @@
-{
-  "id": "math-render-spike",
-  "requirements": {
-    "paseo": ">=0.10.1"
-  }
-}

@@ -4,6 +4,3 @@ artifacts/
 .env.*
 !.env.example
 .DS_Store
-
-# Local compatibility link for existing MCP sessions
-/server

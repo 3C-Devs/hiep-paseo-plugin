@@ -3,11 +3,13 @@ import { mkdtemp, readFile, rmdir, stat, unlink, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import type { PaseoApi } from "@getpaseo/client";
+import type { PluginHandlerContext } from "@getpaseo/plugin/server";
 import type { PluginServerContext } from "@getpaseo/plugin/server";
 import contribute from "../index.server";
 import { createRunPersistence } from "../server/persistence";
 import { createRunStore } from "../server/store";
+
+type PaseoApi = PluginHandlerContext["paseo"];
 
 const agent = {
   id: "finished",

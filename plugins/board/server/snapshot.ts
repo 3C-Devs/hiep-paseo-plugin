@@ -1,6 +1,7 @@
-import { getParentAgentIdFromLabels } from "@getpaseo/protocol/agent-labels";
-import type { PaseoApi } from "@getpaseo/client";
+import type { PluginHandlerContext } from "@getpaseo/plugin/server";
 import type { ActiveAgent } from "./store";
+
+type PaseoApi = PluginHandlerContext["paseo"];
 
 export async function listBoardAgents(paseo: Pick<PaseoApi, "agents">, signal: AbortSignal) {
   const agents: ActiveAgent[] = [];
@@ -19,7 +20,7 @@ export async function listBoardAgents(paseo: Pick<PaseoApi, "agents">, signal: A
       agents.push({
         ...agent,
         workspaceId: agent.workspaceId ?? null,
-        parentAgentId: getParentAgentIdFromLabels(agent.labels),
+        parentAgentId: agent.labels?.["paseo.parent-agent-id"]?.trim() || null,
         model: agent.model,
         effort: agent.effectiveThinkingOptionId ?? agent.thinkingOptionId ?? null,
         project: project?.projectName,

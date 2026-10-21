@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { PaseoApi } from "@getpaseo/client";
+import type { PluginHandlerContext } from "@getpaseo/plugin/server";
 import { listBoardAgents } from "../server/snapshot";
+
+type PaseoApi = PluginHandlerContext["paseo"];
 
 test("fetches every page and detects repeated cursors", async () => {
   let calls = 0;

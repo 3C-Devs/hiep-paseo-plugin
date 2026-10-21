@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { PaseoApi } from "@getpaseo/client";
+import type { PluginHandlerContext } from "@getpaseo/plugin/server";
 
 import { createRunStore } from "../server/store";
 import { firstPromptTitle, isCommandTitle, titleFromPrompt } from "../server/title";
+
+type PaseoApi = PluginHandlerContext["paseo"];
 
 const agent = {
   id: "demo",

@@ -14,9 +14,7 @@
     "thinking-orbs": "^0.3.2"
   },
   "devDependencies": {
-    "@getpaseo/client": "0.9.0-beta.2",
-    "@getpaseo/plugin": "0.9.0-beta.2",
-    "@getpaseo/protocol": "0.9.0-beta.2",
+    "@getpaseo/plugin": "0.12.0",
     "@tanstack/react-query": "^5.90.11",
     "@types/node": "^22.0.0",
     "@types/react": "~19.2.0",
