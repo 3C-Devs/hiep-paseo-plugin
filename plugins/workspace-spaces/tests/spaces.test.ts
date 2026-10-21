@@ -12,7 +12,6 @@ import {
 } from "../shared/spaces";
 import { createWheelGesture, touchDirection } from "../client/gesture";
 import { loadCatalog } from "../server/catalog";
-import type { PaseoApi } from "@getpaseo/client";
 
 test("default membership and host identity survive round trips", () => {
   const initial = stateSchema.parse({});
@@ -85,7 +84,7 @@ test("catalog includes empty projects and all workspace pages without mutations"
             };
       },
     },
-  } as unknown as Pick<PaseoApi, "projects" | "workspaces">;
+  } as unknown as Parameters<typeof loadCatalog>[0];
   const result = await loadCatalog(fake);
   assert.equal(result.projects.length, 2);
   assert.deepEqual(
@@ -101,7 +100,7 @@ test("catalog rejects broken pagination rather than hiding missing workspaces", 
     workspaces: {
       list: async () => ({ entries: [], pageInfo: { hasMore: true, nextCursor: "repeated" } }),
     },
-  } as unknown as Pick<PaseoApi, "projects" | "workspaces">;
+  } as unknown as Parameters<typeof loadCatalog>[0];
   await assert.rejects(loadCatalog(fake), /Refresh to retry/);
 });
 

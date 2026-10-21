@@ -1,5 +1,5 @@
-import type { PaseoApi } from "@getpaseo/client";
-export async function loadCatalog(paseo: Pick<PaseoApi, "projects" | "workspaces">) {
+import type { PluginHandlerContext } from "@getpaseo/plugin/server";
+export async function loadCatalog(paseo: Pick<PluginHandlerContext["paseo"], "projects" | "workspaces">) {
   const { projects } = await paseo.projects.list();
   const rows = new Map(
     projects.map((p) => [
