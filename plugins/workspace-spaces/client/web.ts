@@ -1,34 +1,6 @@
-import { createWheelGesture } from "./gesture";
-type Wheel = {
-  deltaX: number;
-  deltaY: number;
-  deltaMode: number;
-  ctrlKey: boolean;
-  preventDefault(): void;
-};
-type Element = {
-  addEventListener(name: string, fn: (e: Wheel) => void, opts: { passive: boolean }): void;
-  removeEventListener(name: string, fn: (e: Wheel) => void): void;
-};
-export function bindWheel(element: unknown, switchSpace: (direction: number) => void) {
-  if (typeof document === "undefined" || !element || !("addEventListener" in Object(element)))
-    return () => {};
-  const node = element as Element;
-  const gesture = createWheelGesture();
-  const listener = (e: Wheel) => {
-    if (e.ctrlKey) return;
-    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) e.preventDefault();
-    const scale = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 800 : 1;
-    const direction = gesture(e.deltaX * scale, e.deltaY * scale, Date.now());
-    if (direction) switchSpace(direction);
-  };
-  node.addEventListener("wheel", listener, { passive: false });
-  return () => node.removeEventListener("wheel", listener);
-}
-
 import type { SidebarController } from "./sidebar-state";
-import { matchProject, sidebarMembership, viewMembership } from "./sidebar-state";
 import { adjacent, removalTarget } from "../shared/spaces";
+import { createWheelGesture } from "./gesture";
 
 // Desktop-only DOM adapter. No DOM globals leak into the native client bundle.
 interface SlideAnimation {
@@ -93,7 +65,7 @@ declare const MutationObserver: new (callback: () => void) => Observer;
 const OWNER = "data-paseo-spaces-owner";
 const HIDDEN = "data-paseo-space-hidden";
 
-export function supportsSidebarInjection() {
+function supportsSidebarInjection() {
   return (
     typeof document !== "undefined" &&
     typeof navigator !== "undefined" &&
@@ -438,11 +410,15 @@ export function mountSidebar(
         scroll.querySelectorAll('[data-testid^="sidebar-project-row-"]'),
       )) {
         const key = (row.getAttribute("data-testid") ?? "").slice("sidebar-project-row-".length);
-        const project = matchProject(key, snap.projects);
         const group = row.closest('[role="group"]');
         if (group && scroll.contains(group))
-          hide(group, viewMembership(snap.state, key, project) !== active && !snap.error);
+          hide(group, controller.spaceOfView(snap.state, key) !== active && !snap.error);
       }
+    // Workspace rows name their host, which loads the catalogs that keep memberships stable.
+    for (const row of Array.from(doc.querySelectorAll('[data-testid^="sidebar-workspace-row-"]')))
+      controller.watchHost(
+        (row.getAttribute("data-testid") ?? "").slice("sidebar-workspace-row-".length),
+      );
     // Pinned workspace rows are outside project groups and need their own mapping.
     const pinned = doc.querySelector('[data-testid="sidebar-pinned-section"]');
     if (pinned)
@@ -450,14 +426,8 @@ export function mountSidebar(
         pinned.querySelectorAll('[data-testid^="sidebar-workspace-row-"]'),
       )) {
         const key = (row.getAttribute("data-testid") ?? "").slice("sidebar-workspace-row-".length);
-        let id = key;
-        try {
-          id = JSON.parse(key)[1] ?? key;
-        } catch {
-          /* Keep plain workspace IDs. */
-        }
-        const project = snap.projects.find((p) => p.workspaces.some((w) => w.id === id));
-        if (project) hide(row, sidebarMembership(snap.state, project.id) !== active && !snap.error);
+        const space = controller.spaceOfWorkspace(snap.state, key);
+        if (space) hide(row, space !== active && !snap.error);
       }
     for (const marker of Array.from(
       doc.querySelectorAll('[data-testid^="sidebar-project-menu-open-settings-"]'),
@@ -465,7 +435,6 @@ export function mountSidebar(
       const key = (marker.getAttribute("data-testid") ?? "").slice(
         "sidebar-project-menu-open-settings-".length,
       );
-      const project = matchProject(key, snap.projects);
       const menu =
         marker.closest('[role="menu"]') ??
         (marker.closest('[data-menu-surface="true"]') ? marker.parentElement : null);
@@ -481,7 +450,7 @@ export function mountSidebar(
       const menuStamp = JSON.stringify([
         key,
         snap.state.spaces,
-        viewMembership(snap.state, key, project),
+        controller.spaceOfView(snap.state, key),
         snap.busy,
       ]);
       if (own.getAttribute("data-state") === menuStamp) continue;
@@ -491,7 +460,7 @@ export function mountSidebar(
       heading.textContent = "Move to workspace";
       own.appendChild(heading);
       for (const space of snap.state.spaces) {
-        const selected = viewMembership(snap.state, key, project) === space.id;
+        const selected = controller.spaceOfView(snap.state, key) === space.id;
         const b = button(
           own,
           space.name,

@@ -39,6 +39,3 @@ export function createWheelGesture() {
     return x > 0 ? 1 : -1;
   };
 }
-export function touchDirection(dx: number, dy: number) {
-  return Math.abs(dx) >= 70 && Math.abs(dx) > Math.abs(dy) * 1.5 ? (dx < 0 ? 1 : -1) : 0;
-}

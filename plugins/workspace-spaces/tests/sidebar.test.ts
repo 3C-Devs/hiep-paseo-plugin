@@ -4,35 +4,26 @@ import { parseHTML } from "linkedom";
 import { mountSidebar, type DomDocument } from "../client/web";
 import {
   createSidebarController,
-  matchProject,
-  sidebarMembership,
+  moveView,
+  viewSpace,
+  workspaceSpace,
+  type Catalogs,
   type SidebarController,
   type SidebarSnapshot,
 } from "../client/sidebar-state";
-import {
-  addSpace,
-  moveProject,
-  projectKey,
-  removeSpace,
-  renameSpace,
-  stateSchema,
-} from "../shared/spaces";
+import { addSpace, removeSpace, renameSpace, stateSchema } from "../shared/spaces";
+
+const offline = () => {
+  throw new Error("Host offline");
+};
 
 const fixture = `<html><head></head><body><aside><section><div data-testid="sidebar-project-workspace-list-scroll"><div id="workspace-heading"><div>Workspaces</div><div><button data-testid="sidebar-display-preferences-menu">Display preferences</button></div></div><div role="group" id="p"><button data-testid="sidebar-project-row-repo:p">P</button><span>Existing agent</span></div><div role="group" id="q"><button data-testid="sidebar-project-row-repo:q">Q</button></div><div role="group" id="unknown"><button data-testid="sidebar-project-row-other">Other host</button></div></div></section></aside><main>Chat</main><div role="menu"><div data-testid="sidebar-project-menu-open-settings-repo:p">Settings</div></div></body></html>`;
 function setup(html = fixture, moveSucceeded = true, thirdSpace = false) {
   const { document, window } = parseHTML(html);
   let state = addSpace(stateSchema.parse({}));
   if (thirdSpace) state = addSpace(state);
-  state = moveProject(state, projectKey("sidebar", "p"), "space-2");
-  let snapshot: SidebarSnapshot = {
-    state,
-    busy: false,
-    error: "",
-    projects: [
-      { id: "p", name: "P", viewKey: "repo:p", workspaces: [] },
-      { id: "q", name: "Q", viewKey: "repo:q", workspaces: [] },
-    ],
-  };
+  state = moveView(state, new Map(), "repo:p", "space-2");
+  let snapshot: SidebarSnapshot = { state, busy: false, error: "" };
   let listener = () => {},
     mutations = () => {},
     disconnected = false,
@@ -61,7 +52,9 @@ function setup(html = fixture, moveSucceeded = true, thirdSpace = false) {
       listener();
       return true;
     },
-    move: async () => true,
+    spaceOfView: (state: SidebarSnapshot["state"], key: string) => viewSpace(state, new Map(), key),
+    spaceOfWorkspace: () => undefined,
+    watchHost: () => new Map(),
     moveView: async () => moveSucceeded,
     stop: () => {
       stopped = true;
@@ -135,25 +128,62 @@ test("sidebar handles scoped wheel events, rerenders, and host errors", async ()
   assert.match(d.querySelector('[role="status"]')!.textContent!, /Host offline/);
   f.cleanup();
 });
-test("maps equivalence and placement IDs without project-name guessing", () => {
-  const projects = [{ id: "p", name: "Same name", viewKey: "repo:p", workspaces: [] }];
-  assert.equal(matchProject("repo:p", projects)?.id, "p");
-  assert.equal(matchProject('["host","p"]', projects)?.id, "p");
-  assert.equal(matchProject("Same name", projects), undefined);
-  const state = moveProject(addSpace(stateSchema.parse({})), projectKey("host", "p"), "space-2");
-  assert.equal(sidebarMembership(state, "p"), "space-2");
+test("projects keep their Space when Paseo renames their sidebar group", () => {
+  const catalogs: Catalogs = new Map([
+    [
+      "vm",
+      {
+        projects: new Map([
+          ["main", "remote:x"],
+          ["copy", "remote:x"],
+          ["other", "remote:y"],
+        ]),
+        workspaces: new Map([["w", "copy"]]),
+      },
+    ],
+  ]);
+  let state = moveView(addSpace(addSpace(stateSchema.parse({}))), catalogs, "remote:x", "space-2");
+  // A second checkout of the repo switches the group names to host-scoped ones.
+  assert.equal(viewSpace(state, catalogs, '["vm","main"]'), "space-2");
+  assert.equal(viewSpace(state, catalogs, '["placement","vm","copy",1]'), "space-2");
+  assert.equal(workspaceSpace(state, catalogs, '["vm","w"]'), "space-2");
+  assert.equal(viewSpace(state, catalogs, '["vm","other"]'), "space-1");
+  assert.equal(workspaceSpace(state, catalogs, '["elsewhere","w"]'), undefined);
+  // A moved checkout stays put; the rest of the repo follows the latest move.
+  state = moveView(state, catalogs, '["vm","main"]', "space-2");
+  state = moveView(state, catalogs, '["vm","copy"]', "space-3");
+  assert.equal(viewSpace(state, catalogs, '["vm","main"]'), "space-2");
+  assert.equal(viewSpace(state, catalogs, '["vm","later"]'), "space-1");
+  catalogs.get("vm")!.projects.set("later", "remote:x");
+  assert.equal(viewSpace(state, catalogs, '["vm","later"]'), "space-3");
+  // When the copies go away and the remote changes, the remaining checkout keeps its Space.
+  catalogs.get("vm")!.projects.delete("copy");
+  catalogs.get("vm")!.projects.delete("later");
+  catalogs.get("vm")!.projects.set("main", "remote:renamed");
+  assert.equal(viewSpace(state, catalogs, "remote:renamed"), "space-2");
+  // A whole-repo move made before a host's catalog loaded still beats older checkout moves.
+  state = moveView(state, new Map(), "remote:renamed", "space-1");
+  assert.equal(viewSpace(state, catalogs, "remote:renamed"), "space-1");
+  // A checkout moved while its host was unknown keeps its Space when a sibling moves later.
+  state = moveView(state, new Map(), '["vm","solo"]', "space-2");
+  catalogs.get("vm")!.projects.set("solo", "remote:renamed");
+  catalogs.get("vm")!.projects.set("sibling", "remote:renamed");
+  state = moveView(state, catalogs, '["vm","sibling"]', "space-3");
+  assert.equal(viewSpace(state, catalogs, '["vm","solo"]'), "space-2");
+  assert.equal(viewSpace(state, catalogs, '["vm","fresh"]'), "space-1");
+  catalogs.get("vm")!.projects.set("fresh", "remote:renamed");
+  assert.equal(viewSpace(state, catalogs, '["vm","fresh"]'), "space-3");
 });
 test("revision conflicts preserve old state and report an actionable error", async () => {
   const initial = stateSchema.parse({});
   const client = {
     rpc: async (contract: { name: string }) => {
-      if (contract.name === "spaces.catalog") return { projects: [] };
       if (contract.name.endsWith(".read"))
         return { status: "ready", revision: "r1", values: initial };
       return { status: "conflict", error: "Revision conflict" };
     },
   } as unknown as Parameters<typeof createSidebarController>[0];
-  const controller = createSidebarController(client);
+  const controller = createSidebarController(client, offline);
   await controller.refresh();
   assert.equal(await controller.create(), false);
   assert.equal(controller.get()!.state.spaces.length, 1);
@@ -289,20 +319,21 @@ test("swipe on the stationary sidebar reaches empty Space 3 from Space 2", () =>
 test("initial load failure shows Refresh without editable defaults, then restores saved spaces", async () => {
   const { document } = parseHTML(fixture);
   const saved = addSpace(stateSchema.parse({}));
-  let offline = true;
+  let disconnected = true;
   let writes = 0;
-  const controller = createSidebarController({
-    rpc: async (contract: { name: string }) => {
-      if (contract.name === "spaces.catalog") {
-        if (offline) throw new Error("Transport not connected");
-        return { projects: [] };
-      }
-      if (contract.name.endsWith(".read"))
-        return { status: "ready", revision: "saved-revision", values: saved };
-      writes++;
-      throw new Error("Unexpected write");
-    },
-  } as unknown as Parameters<typeof createSidebarController>[0]);
+  const controller = createSidebarController(
+    {
+      rpc: async (contract: { name: string }) => {
+        if (contract.name.endsWith(".read")) {
+          if (disconnected) throw new Error("Transport not connected");
+          return { status: "ready", revision: "saved-revision", values: saved };
+        }
+        writes++;
+        throw new Error("Unexpected write");
+      },
+    } as unknown as Parameters<typeof createSidebarController>[0],
+    offline,
+  );
   const cleanup = mountSidebar(
     document as unknown as DomDocument,
     () => ({ observe() {}, disconnect() {} }),
@@ -319,7 +350,7 @@ test("initial load failure shows Refresh without editable defaults, then restore
     assert.equal(await controller.create(), false);
     assert.equal(await controller.moveView("repo:p", "space-1"), false);
     assert.equal(writes, 0);
-    offline = false;
+    disconnected = false;
     bar.querySelector("button")!.click();
     await new Promise((resolve) => setImmediate(resolve));
     assert.equal(bar.querySelector('[role="status"]')!.textContent, "");
@@ -391,17 +422,22 @@ test("rename rejects blank names, keeps failed drafts, and Escape cancels", asyn
 test("rename persists through refresh and revision conflict preserves saved name", async () => {
   let saved = addSpace(stateSchema.parse({}));
   let conflict = false;
-  const controller = createSidebarController({
-    rpc: async (contract: { name: string }, input: { revision: string; values: typeof saved }) => {
-      if (contract.name === "spaces.catalog") return { projects: [] };
-      if (contract.name.endsWith(".read"))
-        return { status: "ready", revision: "r1", values: saved };
-      assert.equal(input.revision, "r1");
-      if (conflict) return { status: "conflict", error: "Revision conflict" };
-      saved = input.values;
-      return { status: "saved", revision: "r1", values: saved };
-    },
-  } as unknown as Parameters<typeof createSidebarController>[0]);
+  const controller = createSidebarController(
+    {
+      rpc: async (
+        contract: { name: string },
+        input: { revision: string; values: typeof saved },
+      ) => {
+        if (contract.name.endsWith(".read"))
+          return { status: "ready", revision: "r1", values: saved };
+        assert.equal(input.revision, "r1");
+        if (conflict) return { status: "conflict", error: "Revision conflict" };
+        saved = input.values;
+        return { status: "saved", revision: "r1", values: saved };
+      },
+    } as unknown as Parameters<typeof createSidebarController>[0],
+    offline,
+  );
   try {
     await controller.refresh();
     assert.equal(await controller.rename("space-2", "Work"), true);

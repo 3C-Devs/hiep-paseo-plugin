@@ -1,4 +1,4 @@
-import { defineRpc, defineSettings } from "@getpaseo/plugin";
+import { defineSettings } from "@getpaseo/plugin";
 import { z } from "zod";
 export const stateSchema = z
   .object({
@@ -21,24 +21,14 @@ export const preferences = defineSettings({
   version: 1,
   schema: stateSchema,
 });
-export const catalogRpc = defineRpc({
-  name: "spaces.catalog",
-  input: z.object({}),
-  output: z.object({
-    projects: z.array(
-      z.object({
-        id: z.string(),
-        name: z.string(),
-        path: z.string(),
-        viewKey: z.string().optional(),
-        workspaces: z.array(z.object({ id: z.string(), name: z.string() })),
-      }),
-    ),
-  }),
-});
-export const projectKey = (host: string, project: string) => JSON.stringify([host, project]);
-export const membership = (state: SpacesState, key: string) =>
-  Object.hasOwn(state.members, key) ? state.members[key] : state.spaces[0].id;
+// Membership keys. A checkout key holds where one project on one host was last moved. For a repo
+// (Paseo's projectKey, shared by every checkout on every host), the repo key holds its latest move
+// of any kind, used by checkouts never moved themselves, and the whole-repo key holds its latest
+// move as one sidebar group, which competes with checkout moves by recency.
+export const checkoutMember = (serverId: string, projectId: string) =>
+  JSON.stringify(["checkout", serverId, projectId]);
+export const repoMember = (projectKey: string) => JSON.stringify(["repo", projectKey]);
+export const wholeRepoMember = (projectKey: string) => JSON.stringify(["whole", projectKey]);
 export function addSpace(state: SpacesState): SpacesState {
   const number = Math.max(...state.spaces.map((s) => Number(s.id.slice(6)) || 0)) + 1;
   return stateSchema.parse({
@@ -55,11 +45,6 @@ export function renameSpace(state: SpacesState, id: string, name: string): Space
     ...state,
     spaces: state.spaces.map((space) => (space.id === id ? { ...space, name: trimmed } : space)),
   });
-}
-export function moveProject(state: SpacesState, key: string, target: string): SpacesState {
-  if (!state.spaces.some((s) => s.id === target))
-    throw new Error("Workspace no longer exists. Refresh and try again.");
-  return stateSchema.parse({ ...state, members: { ...state.members, [key]: target } });
 }
 export function adjacent(ids: string[], current: string, direction: number): string {
   const index = Math.max(0, ids.indexOf(current));
