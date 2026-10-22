@@ -72,7 +72,10 @@ interface DomEvent {
   preventDefault(): void;
 }
 export interface DomDocument extends DomNode {
-  defaultView?: { matchMedia?(query: string): { matches: boolean } };
+  defaultView?: {
+    matchMedia?(query: string): { matches: boolean };
+    getComputedStyle?(node: DomNode): { color: string };
+  };
   createEvent(
     type: string,
   ): DomEvent & { initEvent(type: string, bubbles: boolean, cancelable: boolean): void };
@@ -179,6 +182,17 @@ export function mountSidebar(
       node.removeAttribute(HIDDEN);
       hidden.delete(node);
     }
+  }
+  // The host colors text elements, not their containers, so inheriting falls back to black in
+  // dark themes. Copy the color of the first host text inside `root` instead.
+  function matchTextColor(target: DomNode, root: DomNode | null) {
+    const text =
+      root &&
+      Array.from(root.querySelectorAll("div,span")).find(
+        (node) => !node.querySelector("*") && node.textContent?.trim(),
+      );
+    const color = text && doc.defaultView?.getComputedStyle?.(text).color;
+    if (color) target.style.setProperty("color", color);
   }
   function button(parent: DomNode, title: string, action: () => void, disabled = false) {
     const b = doc.createElement("button");
@@ -307,6 +321,7 @@ export function mountSidebar(
         snap.state.spaces[0].id;
     }
     updateHeading(snap.error ? null : snap.state.spaces.find((space) => space.id === active)!.name);
+    matchTextColor(bar, doc.querySelector('[data-testid^="sidebar-workspace-row-"]'));
     previousOrder = snap.state.spaces.map((s) => s.id);
     const stamp = JSON.stringify([active, snap.state.spaces, snap.busy, snap.error]);
     if (stamp !== signature) {
@@ -456,19 +471,20 @@ export function mountSidebar(
         (marker.closest('[data-menu-surface="true"]') ? marker.parentElement : null);
       if (!menu) continue;
       let own = menu.querySelector(".paseo-spaces-menu");
-      const menuStamp = JSON.stringify([
-        key,
-        snap.state.spaces,
-        viewMembership(snap.state, key, project),
-        snap.busy,
-      ]);
-      if (own?.getAttribute("data-state") === menuStamp) continue;
       if (!own) {
         own = doc.createElement("div");
         own.setAttribute("class", "paseo-spaces-menu");
         menu.appendChild(own);
         menus.add(own);
       }
+      matchTextColor(own, marker);
+      const menuStamp = JSON.stringify([
+        key,
+        snap.state.spaces,
+        viewMembership(snap.state, key, project),
+        snap.busy,
+      ]);
+      if (own.getAttribute("data-state") === menuStamp) continue;
       own.setAttribute("data-state", menuStamp);
       own.textContent = "";
       const heading = doc.createElement("div");
